@@ -9,6 +9,8 @@ class MyServer(BaseHTTPRequestHandler):
             self.handle_index()
         elif self.path == "/json":
             self.handle_json()
+        elif self.path == "/health":
+            self.handle_health()
         else:
             self.handle_404()
 
@@ -44,6 +46,18 @@ class MyServer(BaseHTTPRequestHandler):
         self.wfile.write(
                json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
            )
+    def handle_health(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.end_headers()
+
+        data = {
+            "status": "ok"
+        }
+
+        self.wfile.write(
+            json.dumps(data).encode("utf-8")
+        )
 
     def handle_404(self):
         self.send_response(404, "Not Found")
