@@ -1,10 +1,13 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
-from urllib.parse import urlparse, parse_qs
+
 
 class MyServer(BaseHTTPRequestHandler):
 
     def do_GET(self):
+        from urllib.parse import urlparse, parse_qs
+
+
         parsed = urlparse(self.path)
         path = parsed.path
         query = parse_qs(parsed.query)
@@ -12,14 +15,16 @@ class MyServer(BaseHTTPRequestHandler):
 
         print(f"[GET]{self.path}")
 
-        if self.path == "/":
-            self.handle_index()
-        elif self.path == "/json":
-            self.handle_json()
-        elif self.path == "/health":
-            self.handle_health()
-        elif path == "/weather":
-            self.handle_weather(query)
+        routes = {
+            "/": self.handle_index,
+            "/json": self.handle_json,
+            "/health": self.handle_health,
+            "/weather": lambda: self.handle_weather(query),
+        }
+        handler = routes.get(path)
+
+        if handler:
+            handler()
         else:
             self.handle_404()
 
