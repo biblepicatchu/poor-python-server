@@ -5,6 +5,8 @@ import json
 class MyServer(BaseHTTPRequestHandler):
 
     def do_GET(self):
+        print(f"[GET]{self.path}")
+
         if self.path == "/":
             self.handle_index()
         elif self.path == "/json":
