@@ -1,12 +1,12 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
+import urllib.request
 
 
 class MyServer(BaseHTTPRequestHandler):
 
     def do_GET(self):
         from urllib.parse import urlparse, parse_qs
-
 
         parsed = urlparse(self.path)
         path = parsed.path
@@ -76,7 +76,7 @@ class MyServer(BaseHTTPRequestHandler):
         city = query.get("city", [None])[0]
 
         if not city:
-            self.send_response(400, "Bad Request")
+            self.send_response(400)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.end_headers()
 
@@ -87,6 +87,62 @@ class MyServer(BaseHTTPRequestHandler):
             }
             self.wfile.write(json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8"))
             return
+        cities = {
+            "Almaty": (43.25, 76.95),
+            "Astana": (51.16, 71.47),
+        }
+        coords = cities.get(city)
+
+        if not coords:
+            self.send_response(404)
+            self.send_header("Content-Type", "application/json; charset-8")
+            self.end_headers()
+
+            data = {
+                "success": False,
+                "error": f"Unknown city: {city}"
+            }
+            self.wfile.write(json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8"))
+            return
+        lat, lon = coords
+
+        url = (
+            "http://api.open-meteo.com/v1/forecast"
+            f"?latitude={lat}&longitude={lon}&current_weather=true"
+        )
+
+        try:
+            with urllib.request.urlopen(url, timeout=5) as response:
+                raw = response.read().decode("utf-8")
+                api_data = json.loads(raw)
+
+                weather = api_data.get("current_weather", {})
+
+        except Exception as e:
+            self.send_response(502)
+            self.send_header("Content_Type", "application/json; charset=utf-8")
+            self.end_headers()
+
+            data = {
+                "success": False,
+                "error": "Weather service unavailable",
+                "details": str(e)
+            }
+            self.wfile.write(json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8"))
+            return
+
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.end_headers()
+
+        data = {
+            "success": True,
+            "city": city,
+            "temperature": weather.get("temperature"),
+            "windspeed": weather.get("windspeed")
+        }
+
+        self.wfile.write(json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8"))
 
         self.send_response(200, "OK")
         self.send_header("Content-Type", "application/json; charset=utf-8")
